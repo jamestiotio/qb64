@@ -26321,4 +26321,4 @@ SUB DebugPrint(text$)
   OPEN debugPath$ + "/qb64.log" FOR APPEND AS #fn
   PRINT #fn, text$
   CLOSE #fn
-END SUBEND SUB
+END SUB
