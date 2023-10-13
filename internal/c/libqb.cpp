@@ -11555,12 +11555,19 @@ void qbg_sub_locate(int32 row,int32 column,int32 cursor,int32 start,int32 stop,i
 			HANDLE output = GetStdHandle (STD_OUTPUT_HANDLE);
 			SetConsoleCursorPosition(output, pos);
 		#else
-            // We don't have a good way of getting the current cursor position, so we ignore any LOCATEs
-            // that don't give an absolute position.
-            if (!(passed & 1 && passed & 2))
+            if (passed & 1 && passed & 2){
+                printf("\033[%d;%dH", row, column);
                 return;
-            printf("\033[%d;%dH", row, column);
-		#endif
+            }
+            if (passed & 1){
+                printf("\033[%dd", row);
+                return;
+            }
+            if (passed & 2){
+                printf("\033[%d;%dG", column);
+                return;
+            }
+        #endif
         return;
 	}
 
