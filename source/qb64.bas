@@ -13123,9 +13123,30 @@ IF os$ = "LNX" THEN
 
     IF inline_DATA = 0 THEN
         IF DataOffset THEN
-            IF INSTR(_OS$, "[32BIT]") THEN b$ = "32" ELSE b$ = "64"
-            OPEN ".\internal\c\makedat_lnx" + b$ + ".txt" FOR BINARY AS #150: LINE INPUT #150, a$: CLOSE #150
-            a$ = a$ + " " + tmpdir2$ + "data.bin " + tmpdir2$ + "data.o"
+            SHELL _HIDE "ld --verbose >internal/temp/ld-output.txt"
+            OPEN "internal/temp/ld-output.txt" FOR BINARY AS #150
+            DO UNTIL EOF(150)
+                LINE INPUT #150, a$
+                IF LEN(a$) THEN
+                    s$ = "OUTPUT_FORMAT(" + CHR$(34)
+                    x1 = INSTR(a$, s$)
+                    IF x1 THEN
+                        x1 = x1 + LEN(s$)
+                        x2 = INSTR(x1, a$, CHR$(34))
+                        format$ = MID$(a$, x1, x2 - x1)
+                    ELSE
+                    s$ = "OUTPUT_ARCH("
+                        x1 = INSTR(a$, s$)
+                        IF x1 THEN
+                            x1 = x1 + LEN(s$)
+                            x2 = INSTR(x1, a$, ")")
+                            architecture$ = MID$(a$, x1, x2 - x1)
+                        END IF
+                    END IF
+                END IF
+            LOOP
+            CLOSE #150
+            a$ = "objcopy -Ibinary -O" + format$ + " -B" + architecture$ + " " + tmpdir2$ + "data.bin " + tmpdir2$ + "data.o"
             CHDIR ".\internal\c"
             SHELL _HIDE a$ + " 2>> ../../" + compilelog$
             CHDIR "..\.."
