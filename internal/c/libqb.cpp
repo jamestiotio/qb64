@@ -6948,9 +6948,58 @@ qbs *qbs_str(float value){
 qbs *qbs_str(double value){
     static qbs *tqbs;
     tqbs=qbs_new(32,1);
+    static char ch;
     static int32 l,i,i2,i3,digits,exponent;
+    static int32 mult,exp,index;
     
     l=sprintf((char*)&qbs_str_buffer,"% .15E",value);
+    
+    // the "new version"...
+
+    // scan the result (in reverse) to determine the exponent.
+    exponent = 0; mult = 1;
+    for (i = l; i > 0; i--) {
+        if (!(qbs_str_buffer[i] == 0 || qbs_str_buffer[i] == 32)) { // not null or space...
+            if (qbs_str_buffer[i] == 43) {
+                break; // if a +, exit for.
+            } else if (qbs_str_buffer[i] == 45) {
+                exponent = -exponent;
+                break; // a -, negate exponent and exit for.
+            } else {
+                exponent += (qbs_str_buffer[i] - 48) * mult;
+                mult *= 10;
+            }
+        }
+    }
+    digits = 0; exp = 0; 
+    for (i = l; i > 0; i--) {
+        if (exp == 0) {
+            if (qbs_str_buffer[i] == 69) { exp = i; } // location of the E
+        } else if (qbs_str_buffer[i] != 48 && qbs_str_buffer[i] != 46) {
+            digits = i; break;
+        }
+    }
+    if (digits==0){
+        tqbs->len=2; tqbs->chr[0]=32; tqbs->chr[1]=48; // tqbs=[space][0]
+        return tqbs;
+    }
+    if (exponent >= 16 || exponent <= -17) {
+        index=0;
+        for (i = 0; i < digits + 1; i++) {
+          ch = qbs_str_buffer[i];
+          tqbs->chr[index++] = ch;
+        }
+        tqbs->chr[index++] = 68;
+        for (i = exp + 1; i < l; i++) {
+          ch = qbs_str_buffer[i];
+          tqbs->chr[index++] = ch;
+        }
+        tqbs->len=index;
+        return tqbs;
+    }
+
+    /* ----- the "old way"; which has problems with formatting certain exponents properly.
+
     //IMPORTANT: assumed l==23
     if (l==22){memmove(&qbs_str_buffer[21],&qbs_str_buffer[20],2); qbs_str_buffer[20]=48; l=23;}
     
@@ -6979,6 +7028,7 @@ qbs *qbs_str(double value){
     if (qbs_str_buffer[19]==45) exponent=-exponent;
     //OLD if ((exponent<=15)&&((exponent-digits)>=-16)) goto asdecimal;
     if ((exponent<=15)&&((exponent-digits)>=-17)) goto asdecimal;
+    
     //fix up exponent to conform to QBASIC standards
     //i. cull trailing 0's after decimal point (use digits to help)
     //ii. cull leading 0's of exponent
@@ -6997,6 +7047,8 @@ qbs *qbs_str(double value){
     return tqbs;
     /////////////////////
     asdecimal:
+    */    
+
     //calculate digits after decimal point in var. i
     i=-(exponent-digits+1);
     if (i<0) i=0;
